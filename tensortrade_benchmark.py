@@ -75,6 +75,7 @@ env = default.create(
     window_size=20
 )
 
+
 agent = DQNAgent(env)
 
 agent.train(n_steps=200, n_episodes=2, save_path="agents/")

@@ -33,6 +33,73 @@ from tensortrade.oms.services.execution.simulated import execute_order
 from tensortrade.oms.wallets import Wallet, Portfolio
 
 import ray.rllib.agents.ppo as ppo
+from symfit import parameters, variables, sin, cos, Fit
+def fourier_series(x, f, n=0):
+    """Creates a symbolic fourier series of order `n`.
+
+    Parameters
+    ----------
+    x : `symfit.Variable`
+        The input variable for the function.
+    f : `symfit.Parameter`
+        Frequency of the fourier series
+    n : int
+        Order of the fourier series.
+    """
+    # Make the parameter objects for all the terms
+    a0, *cos_a = parameters(','.join(['a{}'.format(i) for i in range(0, n + 1)]))
+    sin_b = parameters(','.join(['b{}'.format(i) for i in range(1, n + 1)]))
+
+    # Construct the series
+    series = a0 + sum(ai * cos(i * f * x) + bi * sin(i * f * x)
+                     for i, (ai, bi) in enumerate(zip(cos_a, sin_b), start=1))
+    return series
+
+
+def gbm(price: float,
+        mu: float,
+        sigma: float,
+        dt: float,
+        n: int) -> np.array:
+    """Generates a geometric brownian motion path.
+
+    Parameters
+    ----------
+    price : float
+        The initial price of the series.
+    mu : float
+        The percentage drift.
+    sigma : float
+        The percentage volatility.
+    dt : float
+        The time step size.
+    n : int
+        The number of steps to be generated in the path.
+
+    Returns
+    -------
+    `np.array`
+        The generated path.
+    """
+    y = np.exp((mu - sigma ** 2 / 2) * dt + sigma * np.random.normal(0, np.sqrt(dt), size=n).T)
+    y = price * y.cumprod(axis=0)
+    return y
+
+def fourier_gbm(price, mu, sigma, dt, n, order):
+
+    x, y = variables('x, y')
+    w, = parameters('w')
+    model_dict = {y: fourier_series(x, f=w, n=order)}
+
+    # Make step function data
+    xdata = np.arange(-np.pi, np.pi, 2*np.pi / n)
+    ydata = np.log(gbm(price, mu, sigma, dt, n))
+
+    # Define a Fit object for this model and data
+    fit = Fit(model_dict, x=xdata, y=ydata)
+    fit_result = fit.execute()
+
+    return np.exp(fit.model(x=xdata, **fit_result.params).y)
 
 class PositionChangeChart(Renderer):
 
@@ -76,10 +143,8 @@ class PositionChangeChart(Renderer):
 
         plt.show()
 
-
-def create_env(config):
-    x = np.arange(0, 2*np.pi, 2*np.pi / 1001)
-    y = 50*np.sin(3*x) + 100
+def create_eval_env(config):
+    y = config["y"]
 
     x = np.arange(0, 2*np.pi, 2*np.pi / 1000)
     p = Stream.source(y, dtype="float").rename("USD-TTC")
@@ -128,58 +193,16 @@ def create_env(config):
     )
     return environment
 
-register_env("TradingEnv", create_env)
-
-analysis = tune.run(
-    "PPO",
-    stop={
-      "episode_reward_mean": 500
-    },
-    config={
-        "env": "TradingEnv",
-        "env_config": {
-            "window_size": 25
-        },
-        "log_level": "DEBUG",
-        "framework": "torch",
-        "ignore_worker_failures": True,
-        "num_workers": 2,
-        "num_gpus": 1,
-        "clip_rewards": True,
-        "lr": 8e-6,
-        "lr_schedule": [
-            [0, 1e-1],
-            [int(1e2), 1e-2],
-            [int(1e3), 1e-3],
-            [int(1e4), 1e-4],
-            [int(1e5), 1e-5],
-            [int(1e6), 1e-6],
-            [int(1e7), 1e-7]
-        ],
-        "gamma": 0,
-        "observation_filter": "MeanStdFilter",
-        "lambda": 0.72,
-        "vf_loss_coeff": 0.5,
-        "entropy_coeff": 0.01
-    },
-    name="ray_benchmark",
-    restore="/home/grorge/ray_results/ray_benchmark/PPO_TradingEnv_950e3_00000_0_2021-10-16_23-56-10/checkpoint_000017/checkpoint-17",
-    checkpoint_at_end=True
-)
+register_env("TradingEnv", create_eval_env)
 
 
-# Get checkpoint
-checkpoints = analysis.get_trial_checkpoints_paths(
-    trial=analysis.get_best_trial("episode_reward_mean", "max"),
-    metric="episode_reward_mean"
-)
-checkpoint_path = checkpoints[0][0]
 # Restore agent
 agent = ppo.PPOTrainer(
     env="TradingEnv",
     config={
         "env_config": {
-            "window_size": 25
+            "window_size": 25,
+            "y": fourier_gbm(price=100, mu=0.01, sigma=0.5, dt=0.01, n=1000, order=5)
         },
         "framework": "torch",
         "log_level": "DEBUG",
@@ -204,12 +227,14 @@ agent = ppo.PPOTrainer(
         "entropy_coeff": 0.01
     }
 )
-agent.restore(checkpoint_path)
+agent.restore("/home/grorge/ray_results/ray_benchmark/PPO_TradingEnv_950e3_00000_0_2021-10-16_23-56-10/checkpoint_000017/checkpoint-17")
 
 # Instantiate the environment
-env = create_env({
-    "window_size": 25
+env = create_eval_env({
+    "window_size": 25,
+    "y": fourier_gbm(price=100, mu=0.01, sigma=0.5, dt=0.01, n=1000, order=5)
 })
+
 
 # Run until episode ends
 episode_reward = 0
