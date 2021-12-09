@@ -163,7 +163,7 @@ analysis = tune.run(
         "entropy_coeff": 0.01
     },
     name="ray_benchmark",
-    restore="/home/grorge/ray_results/ray_benchmark/PPO_TradingEnv_950e3_00000_0_2021-10-16_23-56-10/checkpoint_000017/checkpoint-17",
+    #restore="/home/grorge/ray_results/ray_benchmark/PPO_TradingEnv_950e3_00000_0_2021-10-16_23-56-10/checkpoint_000017/checkpoint-17",
     checkpoint_at_end=True
 )
 
