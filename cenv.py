@@ -12,7 +12,7 @@ from tensortrade.agents import DQNAgent
 cdd = CryptoDataDownload()
 
 data = cdd.fetch("Bitfinex", "USD", "BTC", "1h")
-def creat_env(config):
+def create_env(config):
     #action 1:BUY BTC 0:SELL BTC
 
     def rsi(price: Stream[float], period: float) -> Stream[float]:
@@ -54,7 +54,7 @@ def creat_env(config):
     )
     
     cash = Wallet(bitfinex, 10000 * USD)
-    asset = Wallet(bitfinex, 10 * BTC)
+    asset = Wallet(bitfinex, 0 * BTC)
     
     portfolio = Portfolio(USD, [
         cash,
@@ -82,7 +82,7 @@ def creat_env(config):
         feed=feed,
         renderer_feed=renderer_feed,
         renderer=default.renderers.PlotlyTradingChart(),
-        window_size=20,
+        window_size=config["window_size"],
         min_periods=config["min_periods"]
     )
 

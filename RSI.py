@@ -1,17 +1,20 @@
-from  cenv import creat_env
+from  cenv import create_env
 import numpy as np
 import talib
 
 window_size = 20
 min_periods = 20
 
-env = creat_env({"min_periods":20})
+env = create_env({
+    "min_periods":min_periods,
+    "window_size":window_size
+    })
 class RSI:
     def __init__(self):
         self.now = 0
     def compute_action(self, obs):
         close = np.array(obs[:,3], dtype=float)
-        rsi = talib.RSI(close, timeperiod=close.shape[0])[-1]
+        rsi = talib.RSI(close, timeperiod=close.shape[0]-1)[-1]
         if(rsi > 80):
             self.now = 0
             return 0
