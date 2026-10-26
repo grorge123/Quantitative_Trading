@@ -1,39 +1,25 @@
 from tensortrade.oms.instruments import Instrument
 
-USD = Instrument("USD", 10, "U.S. Dollar")
-TTC = Instrument("TTC", 1, "TensorTrade Coin")
-
-from gym.spaces import Discrete
-
-from tensortrade.env.default.actions import TensorTradeActionScheme
-
-from tensortrade.env.generic import ActionScheme, TradingEnv
-from tensortrade.core import Clock
-from tensortrade.oms.instruments import ExchangePair
-from tensortrade.oms.orders import (
-    Order,
-    proportion_order,
-    TradeSide,
-    TradeType
-)
 from tensortrade.env.default.actions import BSH
-from tensortrade.env.default.rewards import TensorTradeRewardScheme
 from tensortrade.env.default.rewards import PBR
 from tensortrade.feed.core import Stream, DataFeed
 import matplotlib.pyplot as plt
 from tensortrade.env.generic import Renderer
-import ray
 import numpy as np
 import pandas as pd
-from ray import tune
 from ray.tune.registry import register_env
-import tensortrade.env.default as default
+from tensortrade.env import default
 from tensortrade.oms.exchanges import Exchange
 from tensortrade.oms.services.execution.simulated import execute_order
 from tensortrade.oms.wallets import Wallet, Portfolio
-
-import ray.rllib.agents.ppo as ppo
+from ray.rllib.agents import ppo
 from symfit import parameters, variables, sin, cos, Fit
+from tensortrade.data.cdd import CryptoDataDownload
+
+USD = Instrument("USD", 10, "U.S. Dollar")
+TTC = Instrument("TTC", 1, "TensorTrade Coin")
+
+
 def fourier_series(x, f, n=0):
     """Creates a symbolic fourier series of order `n`.
 
@@ -104,7 +90,7 @@ def fourier_gbm(price, mu, sigma, dt, n, order):
 class PositionChangeChart(Renderer):
 
     def __init__(self, color: str = "orange"):
-        self.color = "orange"
+        self.color = color
 
     def render(self, env, **kwargs):
         history = pd.DataFrame(env.observer.renderer_history)
@@ -143,12 +129,10 @@ class PositionChangeChart(Renderer):
 
         plt.show()
 
-from tensortrade.data.cdd import CryptoDataDownload
 cdd = CryptoDataDownload()
 def create_eval_env(config):
     y = config["y"]
     data = cdd.fetch("Bitfinex", "USD", "BTC", "1h")
-    x = np.arange(0, 2*np.pi, 2*np.pi / 1000)
     p = Stream.source(list(data["close"]), dtype="float").rename("USD-TTC")
 
     bitfinex = Exchange("bitfinex", service=execute_order)(
