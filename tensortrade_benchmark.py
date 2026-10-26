@@ -1,11 +1,10 @@
-import pandas as pd
-import tensortrade.env.default as default
+from tensortrade.env import default
 
 from tensortrade.data.cdd import CryptoDataDownload
 from tensortrade.feed.core import Stream, DataFeed
 from tensortrade.oms.exchanges import Exchange
 from tensortrade.oms.services.execution.simulated import execute_order
-from tensortrade.oms.instruments import USD, BTC, ETH
+from tensortrade.oms.instruments import USD, BTC
 from tensortrade.oms.wallets import Wallet, Portfolio
 from tensortrade.agents import DQNAgent
 

@@ -1,13 +1,11 @@
-import pandas as pd
-import tensortrade.env.default as default
+from tensortrade.env import default
 
 from tensortrade.data.cdd import CryptoDataDownload
 from tensortrade.feed.core import Stream, DataFeed
 from tensortrade.oms.exchanges import Exchange
 from tensortrade.oms.services.execution.simulated import execute_order
-from tensortrade.oms.instruments import USD, BTC, ETH
+from tensortrade.oms.instruments import USD, BTC
 from tensortrade.oms.wallets import Wallet, Portfolio
-from tensortrade.agents import DQNAgent
 
 cdd = CryptoDataDownload()
 
@@ -35,8 +33,6 @@ def create_env(config):
         s = Stream.source(list(data[c]), dtype="float").rename(data[c].name)
         features += [s]
 
-    cp = Stream.select(features, lambda s: s.name == "close")
-
 
     features = [
         Stream.source(list(data["open"]), dtype="float").rename("open"),
@@ -52,10 +48,10 @@ def create_env(config):
     bitfinex = Exchange("bitfinex", service=execute_order)(
         Stream.source(list(data["close"]), dtype="float").rename("USD-BTC")
     )
-    
+
     cash = Wallet(bitfinex, 10000 * USD)
     asset = Wallet(bitfinex, 0 * BTC)
-    
+
     portfolio = Portfolio(USD, [
         cash,
         asset

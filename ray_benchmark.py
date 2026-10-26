@@ -1,43 +1,28 @@
 from tensortrade.oms.instruments import Instrument
 
-USD = Instrument("USD", 2, "U.S. Dollar")
-TTC = Instrument("TTC", 8, "TensorTrade Coin")
-
-from gym.spaces import Discrete
-
-from tensortrade.env.default.actions import TensorTradeActionScheme
-
-from tensortrade.env.generic import ActionScheme, TradingEnv
-from tensortrade.core import Clock
-from tensortrade.oms.instruments import ExchangePair
-from tensortrade.oms.orders import (
-    Order,
-    proportion_order,
-    TradeSide,
-    TradeType
-)
 from tensortrade.env.default.actions import BSH
-from tensortrade.env.default.rewards import TensorTradeRewardScheme
 from tensortrade.env.default.rewards import PBR
 from tensortrade.feed.core import Stream, DataFeed
 import matplotlib.pyplot as plt
 from tensortrade.env.generic import Renderer
-import ray
 import numpy as np
 import pandas as pd
 from ray import tune
 from ray.tune.registry import register_env
-import tensortrade.env.default as default
+from tensortrade.env import default
 from tensortrade.oms.exchanges import Exchange
 from tensortrade.oms.services.execution.simulated import execute_order
 from tensortrade.oms.wallets import Wallet, Portfolio
+from ray.rllib.agents import ppo
 
-import ray.rllib.agents.ppo as ppo
+USD = Instrument("USD", 2, "U.S. Dollar")
+TTC = Instrument("TTC", 8, "TensorTrade Coin")
+
 
 class PositionChangeChart(Renderer):
 
     def __init__(self, color: str = "orange"):
-        self.color = "orange"
+        self.color = color
 
     def render(self, env, **kwargs):
         history = pd.DataFrame(env.observer.renderer_history)

@@ -22,7 +22,7 @@ class RSI:
             self.now = 1
             return 1
         return self.now
-        
+
 
 agent = RSI()
 obs = env.reset()

@@ -25,7 +25,7 @@ class MACD:
             return 1
         else:
             return 0
-        
+
 
 agent = MACD()
 obs = env.reset()
